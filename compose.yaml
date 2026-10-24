@@ -1,0 +1,40 @@
+services:
+  app:
+    image: webdevops/php-apache:8.3
+    ports:
+      - "${APP_PORT:-8080}:80"
+    environment:
+      WEB_DOCUMENT_ROOT: /app/public
+      PHP_DISPLAY_ERRORS: "1"
+      PHP_MEMORY_LIMIT: 256M
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_NAME: ${MYSQL_DATABASE:-cnpm_tasks}
+      DB_USER: ${MYSQL_USER:-cnpm_user}
+      DB_PASSWORD: ${MYSQL_PASSWORD:-local_lab_password}
+    volumes:
+      - ./app:/app
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: mysql:8.0
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-cnpm_tasks}
+      MYSQL_USER: ${MYSQL_USER:-cnpm_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-local_lab_password}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-local_root_password}
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./database/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+volumes:
+  mysql_data:
